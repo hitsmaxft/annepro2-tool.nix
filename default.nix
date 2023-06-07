@@ -1,35 +1,37 @@
-{}:
+{...}:
 let 
   oxalica_overlay = import (builtins.fetchTarball
-    "https://github.com/oxalica/rust-overlay/archive/master.tar.gz");
-    nixpkgs = import <nixpkgs> { overlays = [ oxalica_overlay ];
+  "https://github.com/oxalica/rust-overlay/archive/master.tar.gz");
+
+  nixpkgs = import <nixpkgs> {
+    overlays = [ oxalica_overlay ];
     system = builtins.currentSystem; 
   };
   rust_channel = nixpkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain;
 in 
   with nixpkgs;
 
-rustPlatform.buildRustPackage rec {
+  rustPlatform.buildRustPackage rec {
 
-  pname = "annepro2-tool";
-  version = "master";
+    pname = "annepro2-tool";
+    version = "0.1.0";
 
-  src = fetchurl {
-    url = "https://github.com/hitsmaxft/AnnePro2-Tools/archive/refs/tags/wsl2_build_676fa74.tar.gz";
-    hash = "sha256-gV3ZnqSv0fuCGLoFTNcnDk2gkbH7pGAWsF1I1izoZuU=";
-  };
+    src = fetchurl {
+      url = "https://github.com/hitsmaxft/AnnePro2-Tools/archive/refs/tags/wsl2_build_676fa74.tar.gz";
+      hash = "sha256-gV3ZnqSv0fuCGLoFTNcnDk2gkbH7pGAWsF1I1izoZuU=";
+    };
 
-  cargoSha256="sha256-IVij04mypb8sEfeMeTTytUHsyDCtfn69vM9nwW1RbEE=";
+    cargoSha256="sha256-tVY0fd63uWjxKf9f5o46Zzh+cSg5hr41exWXCURhYRA=";
 
 
-  nativeBuildInputs = [
-    pkg-config  rust_channel
-
-    (rust_channel.override{
-      extensions = [ "rust-src" "rust-std" ];
-    })
-    llvmPackages.clang
-    pkgconfig
+    nativeBuildInputs = [
+      pkg-config
+      rust_channel
+      (rust_channel.override{
+        extensions = [ "rust-src" "rust-std" ];
+      })
+      llvmPackages.clang
+      pkgconfig
 
     # tools
     codespell
@@ -37,8 +39,12 @@ rustPlatform.buildRustPackage rec {
 
   depsBuildBuild = [ ];
 
-  buildInputs = [ 
 
+  cargoDeps = rustPlatform.fetchCargoTarball {
+    inherit src;
+  };
+
+  buildInputs = [ 
     pkgs.cargo
     pkgs.rustc
     pkgs.libusb1
@@ -46,12 +52,10 @@ rustPlatform.buildRustPackage rec {
     pkgsCross.arm-embedded.buildPackages.gcc
 
   ];
+
   LIBCLANG_PATH = "${pkgs.llvmPackages.libclang.lib}/lib";
 
   configureFlags = [];
-  preConfigure = lib.optional stdenv.hostPlatform.isStatic ''
-    export LIBS="$(''${PKG_CONFIG:-pkg-config} --libs --static libedit)"
-  '';
 
   enableParallelBuilding = true;
 
@@ -63,11 +67,10 @@ rustPlatform.buildRustPackage rec {
   };
 
   passthru = {
-    shellPath = "/bin/annepro2-tool";
     tests = {
-      "execute-simple-command" = runCommand "${pname}-execute-simple-command" { } ''
-        annepro2-tool
-      '';
+      package = annepro2-tool;
+      command = "annepro2-tool -V";
+      version= version;
     };
   };
 }
